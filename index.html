@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Suivi EPI</title>
+
+<meta name="theme-color" content="#1C2B4A">
+<link rel="manifest" href="data:application/manifest+json,{%22name%22:%22Suivi%20EPI%22,%22short_name%22:%22EPI%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%231C2B4A%22,%22theme_color%22:%22%231C2B4A%22}">
+<link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+<div class="app">
+  <!-- Header mobile -->
+  <div class="mobile-header">
+    <div class="title">⚡ Suivi EPI</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <button onclick="toggleSearch()" style="background:none;border:none;color:#fff;font-size:20px;cursor:pointer;padding:4px">🔍</button>
+      <div class="sync-info"><span class="sync-dot" id="sync-dot-m"></span><span id="sync-status-m">…</span></div>
+    </div>
+  </div>
+  <div id="global-search-bar" style="display:none;background:#243660;padding:8px 14px">
+    <input id="global-search-input" placeholder="Rechercher technicien, EPI, habilitation…"
+      style="width:100%;padding:10px 14px;border-radius:8px;border:none;font-size:14px;font-family:inherit"
+      oninput="globalSearch(this.value)">
+  </div>
+  <div id="global-search-results" style="display:none;background:#fff;border-bottom:2px solid var(--border);max-height:50vh;overflow-y:auto"></div>
+
+  <nav class="sidebar">
+    <div class="sidebar-logo">
+      <div class="title">⚡ Suivi EPI</div>
+      <div class="sub">Gestion des équipements</div>
+    </div>
+    <div style="padding:10px 14px;border-bottom:1px solid rgba(255,255,255,.1)">
+      <input id="global-search-desktop" placeholder="🔍 Recherche globale…"
+        style="width:100%;padding:8px 10px;border-radius:6px;border:none;font-size:12px;font-family:inherit;background:rgba(255,255,255,.1);color:#fff"
+        oninput="globalSearch(this.value)" onfocus="document.getElementById('global-search-results-desktop').style.display='block'"
+        onblur="setTimeout(()=>document.getElementById('global-search-results-desktop').style.display='none',200)">
+      <div id="global-search-results-desktop" style="display:none;position:absolute;background:#fff;border-radius:8px;box-shadow:0 4px 20px rgba(0,0,0,.2);z-index:500;width:190px;max-height:300px;overflow-y:auto;margin-top:4px"></div>
+    </div>
+    <div class="sidebar-nav" style="padding:12px 0">
+      <div class="nav-item active" onclick="goTo('tdb')" data-page="tdb"><span class="nav-icon">📊</span> Tableau de bord</div>
+      <div class="nav-item" onclick="goTo('techs')" data-page="techs"><span class="nav-icon">👥</span> Techniciens</div>
+      <div class="nav-item" onclick="goTo('fiches')" data-page="fiches"><span class="nav-icon">📋</span> Fiches EPI</div>
+      <div class="nav-item" onclick="goTo('params')" data-page="params"><span class="nav-icon">⚙️</span> Paramètres</div>
+    </div>
+    <div class="sidebar-footer">
+      <span class="sync-dot" id="sync-dot"></span><span id="sync-status">Connexion…</span><br>
+      <span id="today-date"></span>
+    </div>
+  </nav>
+  <div class="main">
+    <div class="page active" id="page-tdb">
+      <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px">
+        <div><h1>Tableau de bord</h1><p>Vue d'ensemble · alertes en temps réel</p></div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <select id="tdb-agence-filter" onchange="renderTDB()" style="padding:8px 12px;border:1.5px solid var(--border);border-radius:var(--radius);font-size:13px;font-family:inherit">
+            <option value="">Toutes les agences</option>
+            <option value="Nantes">Nantes</option>
+            <option value="Vannes">Vannes</option>
+          </select>
+        </div>
+      </div>
+      <div class="stats-grid" id="stats-grid"></div>
+      <div class="two-col">
+        <div><div class="card"><div class="card-header"><h2>🚨 Alertes actives</h2><span id="alert-count" class="badge nok">0</span></div><div class="alerts-list" id="alerts-list"></div></div></div>
+        <div><div class="card"><div class="card-header"><h2>👤 Par technicien</h2></div><div id="tdb-tech-table"></div></div></div>
+      </div>
+    </div>
+    <div class="page" id="page-techs">
+      <div class="page-header"><h1>Techniciens</h1><p>Gérez les arrivées et départs</p></div>
+      <div class="toolbar">
+        <input class="search-input" id="search-tech" placeholder="🔍 Rechercher…" oninput="renderTechs()">
+        <span class="spacer"></span>
+        <button class="btn btn-primary" onclick="openTechModal()">+ Ajouter un technicien</button>
+      </div>
+      <div class="card">
+        <table><thead><tr><th>Nom</th><th>Agence</th><th>Poste</th><th>Habilitations</th><th>Tailles</th><th>Entrée</th><th>Statut</th><th></th></tr></thead>
+        <tbody id="tech-tbody"></tbody></table>
+      </div>
+    </div>
+    <div class="page" id="page-fiches">
+      <div class="page-header"><h1>Fiches individuelles EPI</h1><p>Détail complet · historique · export PDF</p></div>
+      <div class="selector-bar">
+        <label>Technicien :</label>
+        <select id="fiche-sel" onchange="renderFiche()"></select>
+        <span class="spacer"></span>
+        <button class="btn" onclick="openSignModal()" style="border-color:var(--green);color:var(--green)">✍️ Signer & Exporter</button>
+        <button class="btn" onclick="exportPDF()" style="border-color:var(--navy);color:var(--navy)">🖨 Exporter PDF</button>
+        <button class="btn btn-primary" onclick="openEPIModal()">✏️ Mettre à jour les EPI</button>
+      </div>
+      <div id="fiche-content"></div>
+    </div>
+    <div class="page" id="page-params">
+      <div class="page-header"><h1>Paramètres</h1><p>Périodicités des contrôles</p></div>
+      <div id="params-content"></div>
+      <div style="margin-top:16px;max-width:580px">
+        <div class="card">
+          <div class="card-header"><h2>📊 Export</h2></div>
+          <div style="padding:16px 18px">
+            <button class="btn btn-primary" onclick="exportExcel()">📥 Exporter Excel — tous les techniciens</button>
+          </div>
+        </div>
+      </div>
+      <div style="margin-top:16px;max-width:580px">
+        <div class="card">
+          <div class="card-header"><h2>🔔 Notifications push</h2></div>
+          <div style="padding:16px 18px">
+            <p style="font-size:13px;color:var(--text-s);margin-bottom:12px">Recevez une notification quand un contrôle arrive à échéance ou est dépassé.</p>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button class="btn btn-primary" onclick="requestNotifPermission()">🔔 Activer</button>
+              <button class="btn" onclick="checkAndNotify()">Tester</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<!-- Modal Technicien -->
+<div class="modal-bg" id="modal-tech">
+  <div class="modal">
+    <button class="modal-close" onclick="this.closest('.modal-bg').classList.remove('open')" aria-label="Fermer">✕</button>
+    <h2 id="modal-tech-title">Nouveau technicien</h2>
+    <div class="form-grid">
+      <div class="form-group full"><label>Nom Prénom *</label><input id="t-nom" placeholder="Ex : DUPONT Marie"></div>
+      <div class="form-group"><label>Agence</label><select id="t-agence"></select></div>
+      <div class="form-group"><label>Poste</label><select id="t-poste"></select></div>
+      <div class="form-group"><label>Statut</label><select id="t-statut"><option>Actif</option><option>Inactif</option></select></div>
+      <div class="form-group"><label>Date d'entrée</label><input id="t-entree" type="date"></div>
+      <div class="form-group"><label>Date de départ</label><input id="t-depart" type="date"></div>
+      <div class="form-group"><label>Observations</label><input id="t-obs"></div>
+      <div class="form-section">Tailles</div>
+      <div class="form-group"><label>Vêtement</label><select id="t-tv"></select></div>
+      <div class="form-group"><label>Chaussure</label><select id="t-tc"></select></div>
+      <div class="form-group"><label>Gant</label><select id="t-tg"></select></div>
+      <div class="form-group full"><label>Habilitations</label><div class="hab-grid" id="hab-checks"></div></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeTechModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="saveTech()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal EPI -->
+<div class="modal-bg" id="modal-epi">
+  <div class="modal" style="width:700px">
+    <button class="modal-close" onclick="this.closest('.modal-bg').classList.remove('open')" aria-label="Fermer">✕</button>
+    <h2 id="modal-epi-title">Mise à jour EPI</h2>
+    <div id="epi-form-content"></div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeEPIModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="saveEPI()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Histo -->
+<div class="modal-bg" id="modal-histo">
+  <div class="modal" style="width:500px">
+    <button class="modal-close" onclick="this.closest('.modal-bg').classList.remove('open')" aria-label="Fermer">✕</button>
+    <h2>Ajouter une vérification</h2>
+    <div class="form-grid">
+      <div class="form-group"><label>Technicien *</label><select id="h-tech"></select></div>
+      <div class="form-group"><label>EPI *</label>
+        <select id="h-epi">
+          <option value="casque">Casque</option>
+          <option value="gants_bt">Gants BT</option>
+          <option value="gants_bt_s">Gants BT secours</option>
+          <option value="gants_ht">Gants HT</option>
+          <option value="gants_ht_s">Gants HT secours</option>
+          <option value="tapis">Tapis isolant</option>
+          <option value="nappe">Nappe isolante</option>
+          <option value="cadenas">Cadenas consignation</option>
+          <option value="combi">Combinaison ATEX</option>
+          <option value="veste">Veste ATEX</option>
+          <option value="pantalon">Pantalon ATEX</option>
+          <option value="detec">Détecteur gaz</option>
+          <option value="chaussures">Chaussures sécu</option>
+        </select>
+      </div>
+      <div class="form-group"><label>Type de contrôle</label><select id="h-type"><option>Interne</option><option>Externe</option></select></div>
+      <div class="form-group"><label>Date *</label><input type="date" id="h-date"></div>
+      <div class="form-group"><label>Résultat</label><select id="h-etat"><option>OK</option><option>NOK</option><option>A changer</option></select></div>
+      <div class="form-group"><label>Inspecteur</label><select id="h-inspecteur"></select></div>
+      <div class="form-group full"><label>Observations</label><input id="h-obs"></div>
+      <div class="form-group full">
+        <label>Photo (EPI défectueux)</label>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          <button type="button" class="btn" onclick="document.getElementById('h-photo-input').click()">📷 Prendre / Choisir une photo</button>
+          <input id="h-photo-input" type="file" accept="image/*" capture="environment" style="display:none" onchange="previewPhoto(this)">
+          <span id="h-photo-name" style="font-size:12px;color:var(--text-s)">Aucune photo</span>
+        </div>
+        <div id="h-photo-preview" style="margin-top:8px"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeHistoModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="saveHisto()">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Signature -->
+<div class="modal-bg" id="modal-sign">
+  <div class="modal" style="width:500px">
+    <button class="modal-close" onclick="this.closest('.modal-bg').classList.remove('open')" aria-label="Fermer">✕</button>
+    <h2>✍️ Signature avant export PDF</h2>
+    <div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <label style="font-size:12px;font-weight:700;color:var(--text-s)">Signature du technicien</label>
+        <button class="btn btn-sm" onclick="clearCanvas('sign-tech')">Effacer</button>
+      </div>
+      <canvas id="sign-tech" width="440" height="120" style="border:1.5px solid var(--border);border-radius:8px;touch-action:none;width:100%;background:#fafafa;cursor:crosshair"></canvas>
+    </div>
+    <div style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+        <label style="font-size:12px;font-weight:700;color:var(--text-s)">Signature du responsable / client</label>
+        <button class="btn btn-sm" onclick="clearCanvas('sign-resp')">Effacer</button>
+      </div>
+      <canvas id="sign-resp" width="440" height="120" style="border:1.5px solid var(--border);border-radius:8px;touch-action:none;width:100%;background:#fafafa;cursor:crosshair"></canvas>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeSignModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="exportPDFWithSign()">🖨 Générer le PDF signé</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- Navigation mobile bas -->
+<nav class="bottom-nav">
+  <button class="bottom-nav-item active" onclick="goTo('tdb')" data-bnav="tdb"><span class="bn-icon">📊</span>Bord</button>
+  <button class="bottom-nav-item" onclick="goTo('techs')" data-bnav="techs"><span class="bn-icon">👥</span>Équipe</button>
+  <button class="bottom-nav-item" onclick="goTo('fiches')" data-bnav="fiches"><span class="bn-icon">📋</span>Fiches</button>
+  <button class="bottom-nav-item" onclick="goTo('params')" data-bnav="params"><span class="bn-icon">⚙️</span>Réglages</button>
+</nav>
+
+<!-- Scripts — l'ordre compte : config/état/utilitaires avant les modules qui les utilisent -->
+<script src="js/config.js"></script>
+<script src="js/state.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/api.js"></script>
+<script src="js/navigation.js"></script>
+<script src="js/dashboard.js"></script>
+<script src="js/techniciens.js"></script>
+<script src="js/fiches.js"></script>
+<script src="js/params.js"></script>
+<script src="js/export.js"></script>
+<script src="js/search.js"></script>
+<script src="js/notifications.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
