@@ -30,13 +30,17 @@ async function loadAll(){
     const [t,e,h]=await Promise.all([
       sb('techniciens?order=nom'),
       sb('epi?order=epi_key'),
-      sb('histo?order=date_ctrl.desc')
+      // photo exclue du chargement global : les images base64 (plusieurs Mo) font
+      // dépasser le statement timeout de Supabase — chargées à la demande sur la fiche
+      sb('histo?select=id,tech_id,epi_key,type_ctrl,date_ctrl,etat,inspecteur,obs&order=date_ctrl.desc')
     ]);
     techs=t||[]; epiData=e||[]; histoData=h||[];
     setSyncStatus('ok','Synchronisé');
-    renderAll();
   }catch(err){
+    console.error('Échec de synchronisation Supabase :',err);
     setSyncStatus('err','Hors ligne');
     // Pas de toast en cas d'erreur de connexion — indicateur visuel suffit
+    return;
   }
+  renderAll(); // hors du try : une erreur d'affichage ne doit pas passer pour une panne réseau
 }

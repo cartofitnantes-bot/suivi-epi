@@ -26,7 +26,7 @@ function renderFiche(){
       const nbEntries=entries.length;
       const histoRows=entries.length?entries.map(h=>{
         const resCls=h.etat==='OK'?'ok':h.etat==='NOK'?'nok':'warn';
-        return`<tr><td style="padding:3px 8px;font-size:11px;border-bottom:1px solid #F3F4F6;color:var(--text-s)">${fmtDate(h.date_ctrl)}</td><td style="padding:3px 8px;font-size:11px;border-bottom:1px solid #F3F4F6"><span class="badge blue" style="font-size:10px">${h.type_ctrl}</span></td><td style="padding:3px 8px;font-size:11px;border-bottom:1px solid #F3F4F6"><span class="badge ${resCls}" style="font-size:10px">${h.etat}</span></td><td style="padding:3px 8px;font-size:11px;border-bottom:1px solid #F3F4F6;color:var(--text-s)">${h.inspecteur||'—'}</td><td style="padding:3px 8px;font-size:11px;border-bottom:1px solid #F3F4F6;color:var(--text-s)">${h.obs||'—'}${h.photo?'<br><img src="'+h.photo+'" style="max-width:60px;max-height:45px;border-radius:4px;margin-top:2px;cursor:pointer" onclick="window.open(this.src,\'_blank\')">':''}</td><td style="padding:3px 6px"><button onclick="deleteHistoEntry('${h.id}')" style="background:none;border:none;cursor:pointer;color:#aaa;font-size:12px">🗑</button></td></tr>`;
+        return`<tr><td style="padding:3px 8px;font-size:11px;border-bottom:1px solid #F3F4F6;color:var(--text-s)">${fmtDate(h.date_ctrl)}</td><td style="padding:3px 8px;font-size:11px;border-bottom:1px solid #F3F4F6"><span class="badge blue" style="font-size:10px">${h.type_ctrl}</span></td><td style="padding:3px 8px;font-size:11px;border-bottom:1px solid #F3F4F6"><span class="badge ${resCls}" style="font-size:10px">${h.etat}</span></td><td style="padding:3px 8px;font-size:11px;border-bottom:1px solid #F3F4F6;color:var(--text-s)">${h.inspecteur||'—'}</td><td style="padding:3px 8px;font-size:11px;border-bottom:1px solid #F3F4F6;color:var(--text-s)">${h.obs||'—'}<span id="photo-slot-${h.id}"></span></td><td style="padding:3px 6px"><button onclick="deleteHistoEntry('${h.id}')" style="background:none;border:none;cursor:pointer;color:#aaa;font-size:12px">🗑</button></td></tr>`;
       }).join(''):`<tr><td colspan="6" style="padding:6px 10px;font-size:11px;color:var(--text-s);font-style:italic">Aucune vérification</td></tr>`;
       const hid='h-'+t.id.slice(-6)+'-'+e.key;
       histoBlock=`<div style="display:contents"><div style="grid-column:1/-1;background:#F0F4FF;border-bottom:1px solid var(--border)"><div onclick="toggleHisto('${hid}')" style="display:flex;align-items:center;justify-content:space-between;padding:4px 10px;cursor:pointer;user-select:none"><span style="font-size:10px;font-weight:700;color:var(--blue)">📜 Contrôles (${nbEntries})</span><div style="display:flex;align-items:center;gap:6px"><button onclick="event.stopPropagation();openAddHistoFromFiche('${t.id}','${e.key}')" style="background:var(--blue);color:#fff;border:none;border-radius:4px;padding:2px 7px;font-size:10px;font-weight:700;cursor:pointer">+ Ajouter</button><span id="arr-${hid}" style="font-size:11px;color:var(--blue)">▶</span></div></div><div id="${hid}" style="display:none"><table style="width:100%;border-collapse:collapse"><thead><tr><th style="padding:3px 8px;font-size:10px;font-weight:700;color:var(--text-s);text-align:left;background:#EEF3FB;border-bottom:1px solid var(--border)">Date</th><th style="padding:3px 8px;font-size:10px;font-weight:700;color:var(--text-s);text-align:left;background:#EEF3FB;border-bottom:1px solid var(--border)">Type</th><th style="padding:3px 8px;font-size:10px;font-weight:700;color:var(--text-s);text-align:left;background:#EEF3FB;border-bottom:1px solid var(--border)">Résultat</th><th style="padding:3px 8px;font-size:10px;font-weight:700;color:var(--text-s);text-align:left;background:#EEF3FB;border-bottom:1px solid var(--border)">Inspecteur</th><th style="padding:3px 8px;font-size:10px;font-weight:700;color:var(--text-s);text-align:left;background:#EEF3FB;border-bottom:1px solid var(--border)">Obs.</th><th style="background:#EEF3FB;border-bottom:1px solid var(--border)"></th></tr></thead><tbody>${histoRows}</tbody></table></div></div></div>`;
@@ -37,6 +37,18 @@ function renderFiche(){
   }).join('');
 
   document.getElementById('fiche-content').innerHTML=`<div class="fiche-tech"><div class="fiche-head"><div><div class="name">${t.nom}</div><div class="meta">${t.agence}·${t.poste}</div></div><div style="text-align:right"><div class="badges">${(t.hab||[]).map(h=>`<span class="badge blue" style="font-size:10px">${h}</span>`).join('')}</div><div class="meta" style="margin-top:6px">Vêt.${t.tv||'—'}·Ch.${t.tc||'—'}·Gant ${t.tg||'—'}</div></div></div><div style="display:grid;grid-template-columns:170px 80px 90px 110px 110px 100px 110px;overflow-x:auto"><div class="epi-hdr">EPI</div><div class="epi-hdr">Taille</div><div class="epi-hdr">Classe</div><div class="epi-hdr">Ctrl interne</div><div class="epi-hdr">Prochaine éch.</div><div class="epi-hdr">Péremption</div><div class="epi-hdr">Statut</div>${epiRows}</div></div>`;
+  loadFichePhotos(t.id);
+}
+
+// Photos chargées après coup, seulement pour le technicien affiché
+async function loadFichePhotos(techId){
+  try{
+    const rows=await sb(`histo?tech_id=eq.${techId}&photo=not.is.null&select=id,photo`);
+    (rows||[]).forEach(r=>{
+      const slot=document.getElementById('photo-slot-'+r.id);
+      if(slot)slot.innerHTML=`<br><img src="${r.photo}" style="max-width:60px;max-height:45px;border-radius:4px;margin-top:2px;cursor:pointer" onclick="window.open(this.src,'_blank')">`;
+    });
+  }catch(e){/* photos non bloquantes : la fiche reste utilisable sans elles */}
 }
 
 function toggleHisto(id){
@@ -133,8 +145,19 @@ function previewPhoto(input){
   document.getElementById('h-photo-name').textContent=file.name;
   const reader=new FileReader();
   reader.onload=e=>{
-    photoBase64=e.target.result;
-    document.getElementById('h-photo-preview').innerHTML=`<img src="${photoBase64}" style="max-width:100%;max-height:180px;border-radius:8px;border:1px solid var(--border)">`;
+    // Compression avant stockage : une photo de téléphone brute (5 Mo+) en base64
+    // ferait exploser la table histo et les temps de chargement
+    const img=new Image();
+    img.onload=()=>{
+      const MAX=1000;
+      const scale=Math.min(1,MAX/Math.max(img.width,img.height));
+      const c=document.createElement('canvas');
+      c.width=Math.round(img.width*scale); c.height=Math.round(img.height*scale);
+      c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+      photoBase64=c.toDataURL('image/jpeg',.7);
+      document.getElementById('h-photo-preview').innerHTML=`<img src="${photoBase64}" style="max-width:100%;max-height:180px;border-radius:8px;border:1px solid var(--border)">`;
+    };
+    img.src=e.target.result;
   };
   reader.readAsDataURL(file);
 }
